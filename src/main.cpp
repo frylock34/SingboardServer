@@ -5,6 +5,8 @@
 #include <TimeLib.h>
 #include <WidgetRTC.h>
 #include <secrets.h>
+#include <definitions.h>
+#include <ArduinoOTA.h>
 
 // You should get Auth Token in the Blynk App.
 // Go to the Project Settings (nut icon).
@@ -18,6 +20,13 @@ char pass[] = PASS;
 BlynkTimer timer;
 
 WidgetRTC rtc;
+
+int mode = MODE_CLOCK;
+int animation = ANIMATION_FADE;
+
+int r = 255;
+int g = 255;
+int b = 255;
 
 void clockDisplay()
 {
@@ -36,6 +45,11 @@ void clockDisplay()
   Blynk.virtualWrite(V1, currentTime);
   // Send date to the App
   Blynk.virtualWrite(V2, currentDate);
+
+  if (mode == MODE_CLOCK)
+  {
+    //set clock
+  }
 }
 
 BLYNK_CONNECTED()
@@ -47,11 +61,11 @@ BLYNK_CONNECTED()
 BLYNK_WRITE(V0) // zeRGBa assigned to V0
 {
   // get a RED channel value
-  int r = param[0].asInt();
+  r = param[0].asInt();
   // get a GREEN channel value
-  int g = param[1].asInt();
+  g = param[1].asInt();
   // get a BLUE channel value
-  int b = param[2].asInt();
+  b = param[2].asInt();
 
   Serial.print("Color: ");
   Serial.print(r);
@@ -60,6 +74,54 @@ BLYNK_WRITE(V0) // zeRGBa assigned to V0
   Serial.print(" ,");
   Serial.print(b);
   Serial.println();
+
+  if (mode == MODE_CLOCK)
+  {
+    //set clock color
+  }
+}
+
+BLYNK_WRITE(V3) //mode reading
+{
+  switch (param.asInt())
+  {
+  case 1:
+  { // Item 1
+    Serial.println("Clock mode enabled");
+    mode = 1;
+    break;
+  }
+  case 2:
+  { // Item 2
+    Serial.println("Animation enabled");
+    mode = 2;
+    break;
+  }
+  }
+}
+
+BLYNK_WRITE(V4)
+{
+
+  switch (param.asInt())
+  {
+  case 1:
+  { // Item 1
+    Serial.println("Fade animation");
+    animation = 1;
+    break;
+  }
+  case 2:
+  { // Item 2
+    Serial.println("Flash animation");
+    animation = 2;
+    break;
+  }
+  }
+  if (mode == MODE_ANIMATION)
+  {
+    //set animation here
+  }
 }
 
 void setup()
@@ -68,6 +130,60 @@ void setup()
   Serial.begin(9600);
 
   Blynk.begin(auth, ssid, pass);
+
+  // Port defaults to 8266
+  ArduinoOTA.setPort(8266);
+
+  // Hostname defaults to esp8266-[ChipID]
+  ArduinoOTA.setHostname("myesp8266");
+
+  // No authentication by default
+  ArduinoOTA.setPassword("admin");
+
+  ArduinoOTA.onStart([]() {
+    String type;
+    if (ArduinoOTA.getCommand() == U_FLASH)
+    {
+      type = "sketch";
+    }
+    else
+    { // U_FS
+      type = "filesystem";
+    }
+
+    // NOTE: if updating FS this would be the place to unmount FS using FS.end()
+    Serial.println("Start updating " + type);
+  });
+  ArduinoOTA.onEnd([]() {
+    Serial.println("\nEnd");
+  });
+  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+  });
+  ArduinoOTA.onError([](ota_error_t error) {
+    Serial.printf("Error[%u]: ", error);
+    if (error == OTA_AUTH_ERROR)
+    {
+      Serial.println("Auth Failed");
+    }
+    else if (error == OTA_BEGIN_ERROR)
+    {
+      Serial.println("Begin Failed");
+    }
+    else if (error == OTA_CONNECT_ERROR)
+    {
+      Serial.println("Connect Failed");
+    }
+    else if (error == OTA_RECEIVE_ERROR)
+    {
+      Serial.println("Receive Failed");
+    }
+    else if (error == OTA_END_ERROR)
+    {
+      Serial.println("End Failed");
+    }
+  });
+  ArduinoOTA.begin();
 
   setSyncInterval(10 * 60); // Sync interval in seconds (10 minutes)
 
@@ -79,4 +195,5 @@ void loop()
 {
   Blynk.run();
   timer.run();
+  ArduinoOTA.handle();
 }

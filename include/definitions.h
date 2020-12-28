@@ -1,0 +1,5 @@
+#define MODE_CLOCK 1
+#define MODE_ANIMATION 2
+
+#define ANIMATION_FADE 1
+#define ANIMATION_FLASH 2
