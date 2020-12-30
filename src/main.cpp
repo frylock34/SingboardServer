@@ -7,6 +7,11 @@
 #include <secrets.h>
 #include <definitions.h>
 #include <ArduinoOTA.h>
+#include <FastLED.h>
+
+#define LED_COUNT 16 * 24
+#define LED_PIN 3
+CRGB leds[LED_COUNT];
 
 // You should get Auth Token in the Blynk App.
 // Go to the Project Settings (nut icon).
@@ -130,6 +135,8 @@ void setup()
   Serial.begin(9600);
 
   Blynk.begin(auth, ssid, pass);
+
+  FastLED.addLeds<WS2811, LED_PIN>(leds, LED_COUNT);
 
   // Port defaults to 8266
   ArduinoOTA.setPort(8266);
