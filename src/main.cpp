@@ -9,9 +9,18 @@
 #include <ArduinoOTA.h>
 #include <FastLED.h>
 
-#define LED_COUNT 16 * 24
+#define LED_COUNT 12 * 32
 #define LED_PIN 3
 CRGB leds[LED_COUNT];
+
+// nighttime dimming constants
+// brightness based on time of day- could try warmer colors at night?
+#define DAYBRIGHTNESS 64
+#define NIGHTBRIGHTNESS 20
+
+// cutoff times for day / night brightness. feel free to modify.
+#define MORNINGCUTOFF 7 // when does daybrightness begin?   7am
+#define NIGHTCUTOFF 22  // when does nightbrightness begin? 10pm
 
 // You should get Auth Token in the Blynk App.
 // Go to the Project Settings (nut icon).
@@ -37,6 +46,9 @@ void clockDisplay()
 {
   // You can call hour(), minute(), ... at any time
   // Please see Time library examples for details
+  int hours = hour();
+  int minutes = minute();
+  int seconds = second();
 
   String currentTime = String(hour()) + ":" + minute() + ":" + second();
   String currentDate = String(day()) + " " + month() + " " + year();
@@ -53,7 +65,61 @@ void clockDisplay()
 
   if (mode == MODE_CLOCK)
   {
-    //set clock
+    //set brightness
+    if (seconds == 0)
+    {
+      if (hours < MORNINGCUTOFF || hours >= NIGHTCUTOFF)
+      {
+        FastLED.setBrightness(NIGHTBRIGHTNESS);
+      }
+      else
+      {
+        FastLED.setBrightness(DAYBRIGHTNESS);
+      }
+    }
+
+    hours = hours % 12;
+    byte pixelColorRed, pixelColorGreen, pixelColorBlue;
+
+    for (uint8_t i = 0; i < LED_COUNT; i++)
+    {
+
+      if (i <= seconds)
+      {
+        // calculates a faded arc from low to maximum brightness
+        pixelColorBlue = (i + 1) * (255 / (seconds + 1));
+        //pixelColorBlue = 255;
+      }
+      else
+      {
+        pixelColorBlue = 0;
+      }
+
+      if (i <= minutes)
+      {
+        pixelColorGreen = (i + 1) * (255 / (minutes + 1));
+        //pixelColorGreen = 255;
+      }
+      else
+      {
+        pixelColorGreen = 0;
+      }
+
+      if (i <= hours)
+      {
+        pixelColorRed = (i + 1) * (255 / (hours + 1));
+        //pixelColorRed = 255;
+      }
+      else
+      {
+        pixelColorRed = 0;
+      }
+
+      leds[i % LED_COUNT] = CRGB(pixelColorRed, pixelColorGreen, pixelColorBlue);
+    }
+
+    //display
+    FastLED.show();
   }
 }
 
@@ -137,6 +203,7 @@ void setup()
   Blynk.begin(auth, ssid, pass);
 
   FastLED.addLeds<WS2811, LED_PIN>(leds, LED_COUNT);
+  FastLED.setBrightness(DAYBRIGHTNESS);
 
   // Port defaults to 8266
   ArduinoOTA.setPort(8266);
