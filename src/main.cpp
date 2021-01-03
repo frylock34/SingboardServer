@@ -8,10 +8,14 @@
 #include <definitions.h>
 #include <ArduinoOTA.h>
 #include <FastLED.h>
+#include <animations.h>
 
 #define LED_COUNT 12 * 32
 #define LED_PIN 3
 CRGB leds[LED_COUNT];
+
+uint16_t frame = 0;
+#define ANIMATE_SPEED 100;
 
 // nighttime dimming constants
 // brightness based on time of day- could try warmer colors at night?
@@ -123,6 +127,53 @@ void clockDisplay()
   }
 }
 
+void handleAnimation()
+{
+  if (mode != MODE_ANIMATION)
+    return;
+
+  switch (animation)
+  {
+  case 1:
+    RingPair(leds, frame);
+    break;
+  case 2:
+    DoubleChaser(leds, frame);
+    break;
+  case 3:
+    TripleBounce(leds, frame);
+    break;
+  case 4:
+    WaveInt(leds, frame, 180);
+    break;
+  case 5:
+    Wave(leds, frame, 180);
+    break;
+  case 6:                         //Blue spark (Slow)
+    Spark(leds, frame, 255, 188); //Overloaded version of "Spark" with Hue value, 255 for fade is the slowest fade possible. 256 is on/off
+    delay(2);                     //Slow things down a bit more for Slow Spark
+    break;
+  case 7:                         //Blue spark (fast)
+    Spark(leds, frame, 246, 188); //Overloaded version of "Spark" with Hue value, 246 fade is faster which makes for a sharper dropoff
+    break;
+  case 8:                    //White spark (Slow)
+    Spark(leds, frame, 255); //"Spark" function without hue make a white spark, 255 for fade is the slowest fade possible.
+    delay(2);                //Slow things down a bit more for Slow Spark
+    break;
+  case 9: //White spark (fast)			//"Spark" function without hue make a white spark, 246 fade is faster which makes for a sharper dropoff
+    Spark(leds, frame, 245);
+    break;
+  case 10:
+    RainbowSpark(leds, frame, 240); //240 for dropoff is a pretty sharp fade, good for this animation
+    break;
+  default:
+    delay(100); //Animation OFF
+  }
+
+  FastLED.show(); //All animations are applied!..send the results to the strip(s)
+  frame += ANIMATE_SPEED;
+}
+
 BLYNK_CONNECTED()
 {
   // Synchronize time on connection
@@ -173,26 +224,12 @@ BLYNK_WRITE(V3) //mode reading
 
 BLYNK_WRITE(V4)
 {
-
-  switch (param.asInt())
+  int animValue = param.asInt();
+  if (animValue > 10)
   {
-  case 1:
-  { // Item 1
-    Serial.println("Fade animation");
-    animation = 1;
-    break;
+    animValue = 10; //we have only 10 animations
   }
-  case 2:
-  { // Item 2
-    Serial.println("Flash animation");
-    animation = 2;
-    break;
-  }
-  }
-  if (mode == MODE_ANIMATION)
-  {
-    //set animation here
-  }
+  animation = animValue;
 }
 
 void setup()
@@ -204,6 +241,7 @@ void setup()
 
   FastLED.addLeds<WS2811, LED_PIN>(leds, LED_COUNT);
   FastLED.setBrightness(DAYBRIGHTNESS);
+  FastLED.clear();
 
   // Port defaults to 8266
   ArduinoOTA.setPort(8266);
@@ -270,4 +308,5 @@ void loop()
   Blynk.run();
   timer.run();
   ArduinoOTA.handle();
+  handleAnimation();
 }
