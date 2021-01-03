@@ -8,36 +8,50 @@
 #define ANIMATE_SPEED 100
 #endif
 
-//#######################################################################################################
-//##                                      AGGREGATE ANIMATIONS                                         ##
-//#######################################################################################################
-void TripleBounce(CRGB strip[], uint16_t frame) //3 chaser animations offset by 120 degrees each
+//Anti-aliasing code care of Mark Kriegsman Google+: https://plus.google.com/112916219338292742137/posts/2VYNQgD38Pw
+void drawFractionalBar(CRGB targetStrip[], int pos16, int width, uint8_t hue, bool wrap)
 {
-    FastLED.clear(); //Clear previous buffer
-    Bounce(strip, frame, 0);
-    Bounce(strip, frame + (MAX_INT_VALUE / 3), 100);
-    Bounce(strip, frame + (MAX_INT_VALUE / 3) * 2, 150);
-}
+    uint8_t stripLength = sizeof(targetStrip) / sizeof(CRGB);
+    uint8_t i = pos16 / 16; // convert from pos to raw pixel number
 
-void DoubleChaser(CRGB strip[], uint16_t frame) //2 chaser animations offset 180 degrees
-{
-    FastLED.clear(); //Clear previous buffer
-    frame = frame * 2;
-    Ring(strip, frame, 0);
-    Ring(strip, frame + (MAX_INT_VALUE / 2), 150);
-}
+    uint8_t frac = pos16 & 0x0F; // extract the 'factional' part of the position
+    uint8_t firstpixelbrightness = 255 - (frac * 16);
 
-void RingPair(CRGB strip[], uint16_t frame) //2 rings animations at inverse phases
-{
-    FastLED.clear(); //Clear previous buffer
-    Ring(strip, frame, 30);
-    Ring(strip, MAX_INT_VALUE - frame, 150);
-}
+    uint8_t lastpixelbrightness = 255 - firstpixelbrightness;
 
-void RainbowSpark(CRGB targetStrip[], uint16_t animationFrame, uint8_t fade)
-{ //Color spark where hue is function of frame
-    Spark(targetStrip, animationFrame, fade, animationFrame / 255);
-    delay(20);
+    uint8_t bright;
+    for (int n = 0; n <= width; n++)
+    {
+        if (n == 0)
+        {
+            // first pixel in the bar
+            bright = firstpixelbrightness;
+        }
+        else if (n == width)
+        {
+            // last pixel in the bar
+            bright = lastpixelbrightness;
+        }
+        else
+        {
+            // middle pixels
+            bright = 255;
+        }
+
+        targetStrip[i] += CHSV(hue, 255, bright);
+        i++;
+        if (i == stripLength)
+        {
+            if (wrap == 1)
+            {
+                i = 0; // wrap around
+            }
+            else
+            {
+                return;
+            }
+        }
+    }
 }
 
 //#######################################################################################################
@@ -170,48 +184,34 @@ void Spark(CRGB targetStrip[], uint16_t animationFrame, uint8_t fade)
     }
 }
 
-//Anti-aliasing code care of Mark Kriegsman Google+: https://plus.google.com/112916219338292742137/posts/2VYNQgD38Pw
-void drawFractionalBar(CRGB targetStrip[], int pos16, int width, uint8_t hue, bool wrap)
+//#######################################################################################################
+//##                                      AGGREGATE ANIMATIONS                                         ##
+//#######################################################################################################
+void TripleBounce(CRGB strip[], uint16_t frame) //3 chaser animations offset by 120 degrees each
 {
-    uint8_t stripLength = sizeof(targetStrip) / sizeof(CRGB);
-    uint8_t i = pos16 / 16; // convert from pos to raw pixel number
+    FastLED.clear(); //Clear previous buffer
+    Bounce(strip, frame, 0);
+    Bounce(strip, frame + (MAX_INT_VALUE / 3), 100);
+    Bounce(strip, frame + (MAX_INT_VALUE / 3) * 2, 150);
+}
 
-    uint8_t frac = pos16 & 0x0F; // extract the 'factional' part of the position
-    uint8_t firstpixelbrightness = 255 - (frac * 16);
+void DoubleChaser(CRGB strip[], uint16_t frame) //2 chaser animations offset 180 degrees
+{
+    FastLED.clear(); //Clear previous buffer
+    frame = frame * 2;
+    Ring(strip, frame, 0);
+    Ring(strip, frame + (MAX_INT_VALUE / 2), 150);
+}
 
-    uint8_t lastpixelbrightness = 255 - firstpixelbrightness;
+void RingPair(CRGB strip[], uint16_t frame) //2 rings animations at inverse phases
+{
+    FastLED.clear(); //Clear previous buffer
+    Ring(strip, frame, 30);
+    Ring(strip, MAX_INT_VALUE - frame, 150);
+}
 
-    uint8_t bright;
-    for (int n = 0; n <= width; n++)
-    {
-        if (n == 0)
-        {
-            // first pixel in the bar
-            bright = firstpixelbrightness;
-        }
-        else if (n == width)
-        {
-            // last pixel in the bar
-            bright = lastpixelbrightness;
-        }
-        else
-        {
-            // middle pixels
-            bright = 255;
-        }
-
-        targetStrip[i] += CHSV(hue, 255, bright);
-        i++;
-        if (i == stripLength)
-        {
-            if (wrap == 1)
-            {
-                i = 0; // wrap around
-            }
-            else
-            {
-                return;
-            }
-        }
-    }
+void RainbowSpark(CRGB targetStrip[], uint16_t animationFrame, uint8_t fade)
+{ //Color spark where hue is function of frame
+    Spark(targetStrip, animationFrame, fade, animationFrame / 255);
+    delay(20);
 }
